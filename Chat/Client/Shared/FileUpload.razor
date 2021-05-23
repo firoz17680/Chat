@@ -1,0 +1,48 @@
+﻿@page "/Upload"
+@inject HttpClient Http
+ 
+@using System.IO
+<h1>Blazor WebAssembly File Upload</h1>
+
+<h3>@Message</h3>
+
+<form >
+    <InputFile OnChange="OnInputFileChange" multiple />
+    <br /><br />
+    <button type="button" @onclick="@OnSubmit">Upload Selected File(s)</button>
+</form>
+
+@code {
+
+    string Message = "No file(s) selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+
+    private void OnInputFileChange (InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+    private async void OnSubmit()
+    {
+        foreach (var file in selectedFiles)
+        {
+
+
+            Stream stream = file.OpenReadStream();
+            MemoryStream ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            stream.Close();
+
+            UploadedFile uploadedFile = new UploadedFile();
+            uploadedFile.FileName = file.Name;
+            uploadedFile.FileContent = ms.ToArray();
+            ms.Close();
+
+            await Http.PostAsJsonAsync<UploadedFile>    ("api/fileupload", uploadedFile);
+        }
+        Message = $"{selectedFiles.Count} file(s) uploaded on server";
+        this.StateHasChanged();
+    }
+}

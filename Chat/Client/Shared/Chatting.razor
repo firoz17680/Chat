@@ -1,0 +1,249 @@
+﻿@page "/Chatting"
+@inject NavigationManager navigationManager 
+
+
+
+<div class="top-row px-4">
+    @if (chatting) { 
+        <p>You are connected as <b>@userName</b></p>
+        <button class="btn btn-sm btn-warning ml-md-auto" @onclick="@DisconnectAsync">Disconnect</button>
+    }
+</div>
+
+<div class="content px-4">
+    <h1>Blazor Chat</h1>
+    @if (!chatting)
+    {
+        <h2>Chat</h2>
+        <p>Enter your name to start chatting</p>
+        <input type="text" @bind="@userName" />
+        <button @onclick="@StartChat">
+            <span class="oi oi-chat" aria-hidden="true"></span> Chat
+        </button>
+
+        @if (message != null)
+        {
+            <div class="invalid-feedback">@message</div>
+            <small id="emailHelp" class="form-text text-muted">@message</small>
+        }
+    }
+    else
+    {
+        <div id="scrollbox">
+            @foreach (var item in messages)
+            {
+                <div class="@item.CSS">
+                    <div class="user">@item.UserName</div>
+                    <div class="user">@item.Body</div>
+                </div>
+            }
+            <hr />
+            <textarea class="input-lg" placeholder="Type Here..." @bind="@newMessage">
+                </textarea>
+            <button class="btn" @onclick="@SendAsync">Send</button>
+
+        </div>
+
+    }
+
+
+
+</div>
+
+
+@code {
+
+    bool chatting = false;
+    string userName = null;
+
+    ChatClient client = null;
+    string message = null;
+    string newMessage = null;
+    List<Message> messages = new List<Message>();
+
+    async Task StartChat()
+    {
+        if (string.IsNullOrWhiteSpace(userName))
+        {
+            message = "Please enter the name";
+            return;
+        }
+
+        try
+        {
+            messages.Clear();
+            client = new ChatClient(userName, navigationManager);
+            client.MessageReceived += MessageReceived;
+            await client.StartAsync();
+
+            chatting = true;
+
+        }
+        catch(Exception)
+        {
+            message = "";
+        }
+    }
+
+    void MessageReceived(object sender, MessageReceivedEventArgs e)
+    {
+        bool isMine = false;
+        if (!string.IsNullOrWhiteSpace(e.UserName))
+        {
+            isMine = string.Equals(e.UserName, userName, StringComparison.CurrentCultureIgnoreCase);
+        }
+
+        var newMsg = new Message(e.UserName, e.Message, isMine);
+        messages.Add(newMsg);
+        StateHasChanged();
+
+    }
+
+    async Task DisconnectAsync()
+    {
+        if (chatting)
+        {
+            await client.StopAsync();
+            client = null;
+            message = "Chat ended";
+            chatting = false;
+        }
+    }
+
+    async Task SendAsync()
+    {
+        if(chatting && !string.IsNullOrWhiteSpace(newMessage))
+        {
+            await client.SendAsync(newMessage);
+
+            newMessage = "";
+        }
+    }
+
+
+    class Message
+    {
+        public Message(string user, string body, bool mine)
+        {
+            UserName = user;
+            Body = body;
+            IsMine = mine;
+        }
+        public string  UserName { get; set; }
+        public string Body { get; set; }
+        public bool IsMine { get; set; }
+
+        public string CSS { get { return IsMine ? "box sb1" : "box1 sb2"; } }
+
+    }
+
+
+
+
+
+}
+
+
+<style>
+    * {
+        margin: 0px;
+        padding: 0px;
+    }
+
+    .box {
+        width: 300px;
+        margin: 10px auto;
+        background: #00bfb6;
+        padding: 20px;
+        text-align: center;
+        font-weight: 300;
+        color: #fff;
+        font-family: arial;
+        position: relative;
+    }
+    .box1 {
+        width: 300px;
+        margin: 10px auto;
+        background: #006cbf;
+        padding: 20px;
+        text-align: center;
+        font-weight: 300;
+        color: #fff;
+        font-family: arial;
+        position: relative;
+    }
+
+
+    .sb1:before {
+        content: "";
+        width: 0px;
+        height: 0px;
+        position: absolute;
+        border-left: 10px solid #00bfb6;
+        border-right: 10px solid transparent;
+        border-top: 10px solid #00bfb6;
+        border-bottom: 10px solid transparent;
+        right: -19px;
+        top: 6px;
+    }
+
+    .sb2:before {
+        content: "";
+        width: 0px;
+        height: 0px;
+        position: absolute;
+        border-left: 10px solid transparent;
+        border-right: 10px solid #00bfb6;
+        border-top: 10px solid #00bfb6;
+        border-bottom: 10px solid transparent;
+        left: -19px;
+        top: 6px;
+    }
+
+    .sb3:before {
+        content: "";
+        width: 0px;
+        height: 0px;
+        position: absolute;
+        border-left: 10px solid #00bfb6;
+        border-right: 10px solid transparent;
+        border-top: 10px solid #00bfb6;
+        border-bottom: 10px solid transparent;
+        left: 19px;
+        bottom: -19px;
+    }
+
+    .sb4:before {
+        content: "";
+        width: 0px;
+        height: 0px;
+        position: absolute;
+        border-left: 10px solid transparent;
+        border-right: 10px solid #00bfb6;
+        border-top: 10px solid #00bfb6;
+        border-bottom: 10px solid transparent;
+        right: 19px;
+        bottom: -19px;
+    }
+
+
+
+    /* youtube link */
+    .youtube {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        width: 160px;
+        text-align: center;
+        padding: 15px 10px;
+        background: #bb0000;
+        border-radius: 5px;
+    }
+
+        .youtube a {
+            text-decoration: none;
+            color: #fff;
+            text-transform: capitalize;
+            letter-spacing: 1px;
+        }
+</style>

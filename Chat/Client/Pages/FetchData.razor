@@ -1,0 +1,79 @@
+﻿@page "/fetchdata"
+@using Chat.Shared
+@inject HttpClient Http
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div>
+        Count : <input type="number" @bind="@count" /><button class="btn btn-primary" @onclick="@LoadData">Load</button>
+    </div>
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            <Virtualize Items="@forecasts" TItem="WeatherForecast" Context="forecast">
+                <tr>
+                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+    </tr>
+            </Virtualize>
+        </tbody>
+    </table>
+
+    @*<DataGrid TItem="WeatherForecast" ShowPager="true" PageSize="25"
+                  Data="@forecasts"
+                  Filterable="true"
+                  FilterMethod="DataGridFilterMethod.Contains">
+
+            <DataGridColumn TItem="WeatherForecast" Field="@nameof( WeatherForecast.Date )" Caption="Date" />
+            <DataGridColumn TItem="WeatherForecast" Field="@nameof( WeatherForecast.TemperatureC )" Caption="Temp C" />
+            <DataGridColumn TItem="WeatherForecast" Field="@nameof( WeatherForecast.TemperatureF )" Caption="Temp F" />
+            <DataGridColumn TItem="WeatherForecast" Field="@nameof( WeatherForecast.Summary )" Caption="Summary" />
+
+        </DataGrid>*@
+
+}
+
+@code {
+    int count = 5;
+    //int page = 1;
+    private List<WeatherForecast> forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        forecasts = await Http.GetFromJsonAsync<List<WeatherForecast>>($"WeatherForecast/Count/{count}");
+
+    }
+
+    protected async Task<ValueTask<ItemsProviderResult<WeatherForecast>>> GetVirtualList(ItemsProviderRequest request)
+    {
+        var requestQty = Math.Min(request.Count, count - request.StartIndex);
+        var list = await Http.GetFromJsonAsync<List<WeatherForecast>>($"WeatherForecast/Count/{requestQty}/{request.StartIndex}");
+        var result = new ItemsProviderResult<WeatherForecast>(list, count);
+        return ValueTask.FromResult(result);
+    }
+
+}

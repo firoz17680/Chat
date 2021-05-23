@@ -1,0 +1,64 @@
+﻿@page "/Virtualize"
+
+@inject HttpClient Http
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div>
+        Count : <input type="number" @bind="@count" /><button class="btn btn-primary" @onclick="@LoadData">Load</button>
+    </div>
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Sno</th>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <Virtualize Items="@forecasts" TItem="WeatherForecast" Context="forecast"  >
+                <tr>
+                    <td>@forecast.Srno</td>
+                    <td><input type="date" @bind="@forecast.Date" /></td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+                    <td>@(DateTime.Now.Year - forecast.Date.Year)</td>
+                </tr>
+
+            </Virtualize>
+
+        </tbody>
+    </table>
+}
+
+@code {
+    int count = 5;
+    private List<WeatherForecast> forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        forecasts = await Http.GetFromJsonAsync<List<WeatherForecast>>($"WeatherForecast/Count/{count}");
+
+    }
+
+}

@@ -1,0 +1,59 @@
+﻿@page "/Chat"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager navigationManager
+
+<h3>Chat</h3>
+<EditForm Model="@message" OnValidSubmit="@SendMessage">
+    <div class="form-group">
+        <label for="exampleInputEmail1">Name</label>
+        <input type="text" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter Name" @bind="@message.Name">
+        <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
+    </div>
+    <div class="form-group">
+        <label for="exampleInputPassword1">Message</label>
+        <input type="text" class="form-control" id="exampleInputPassword1" placeholder="Password" @bind="@message.Message">
+    </div>
+    <DataAnnotationsValidator />
+    <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+    <button type="submit" class="btn btn-primary">Submit</button>
+
+</EditForm>
+<hr />
+<ul class="list-group">
+    @foreach(var m in Messages.OrderByDescending(x=>x.Date).ToList())
+            {
+                <li class="list-group-item">@m.Name : @m.Message <div class="text-muted text-sm-left">@m.Date.ToString("dd-MMM-yyyy HH:mm:ss")</div></li>
+            }
+</ul>
+
+
+@code {
+        
+
+    List<ChatMessage> Messages = new List<ChatMessage>();
+    ChatMessage message = new ChatMessage();
+    HubConnection hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+                            .WithUrl(navigationManager.BaseUri + "hubs/ChatHub")
+                            .Build();
+
+        hubConnection.On<string, string>("SendMessage", (name, message) => {
+            Messages.Add(new ChatMessage { Name = name, Message = message, Date = DateTime.Now , SerialNo = Messages.Count()+1});
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+
+    }
+
+    protected async Task SendMessage()
+    {
+        await hubConnection.SendAsync("SendMessage", message.Name, message.Message);
+        message.Message = string.Empty;
+    }
+
+
+}
